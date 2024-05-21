@@ -1,0 +1,30 @@
+import pandas as pd
+import requests
+
+# Load the uploaded CSV file
+file_path = '/mnt/data/DOI1 - 2023-2018.csv'
+data = pd.read_csv(file_path)
+
+# Define a function to fetch title and publication date using CrossRef API
+def fetch_article_info(doi):
+    url = f"https://api.crossref.org/works/{doi}"
+    response = requests.get(url)
+    if response.status_code == 200:
+        data = response.json()
+        title = data["message"].get("title", [""])[0]
+        publication_date = "-".join(map(str, data["message"].get("published-print", {}).get("date-parts", [[None]])[0]))
+        return title, publication_date
+    else:
+        return None, None
+
+# Apply the function to each DOI in the dataframe and create new columns for title and publication date
+data['Title'], data['Publication Date'] = zip(*data['DOI'].apply(fetch_article_info))
+
+# Save the updated dataframe to a new CSV file
+output_path = '/mnt/data/DOI_Article_Info.csv'
+data.to_csv(output_path, index=False)
+
+import ace_tools as tools; tools.display_dataframe_to_user(name="Updated Article Information", dataframe=data)
+
+# Display the updated dataframe
+data.head()
